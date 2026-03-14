@@ -6,6 +6,10 @@ OpenMAIC generation does not automatically reuse the OpenClaw agent's current mo
 
 OpenMAIC server APIs resolve their own model and provider keys from OpenMAIC server-side config.
 
+This skill does not rely on runtime overrides for model, provider, API key, base URL, or provider type.
+
+If the user wants to change any of those, they must edit OpenMAIC server-side config files.
+
 ## Interaction Policy
 
 - Do not begin by asking the user to paste an API key into chat.
@@ -14,6 +18,8 @@ OpenMAIC server APIs resolve their own model and provider keys from OpenMAIC ser
 - The user should edit `.env.local` or `server-providers.yml` themselves.
 - Do not offer to write the key for them.
 - Do not ask for the literal key in chat.
+- Do not suggest temporary request-time overrides.
+- If generation fails because of auth, provider, or model selection, direct the user back to server-side config files.
 
 ## Preferred User Flow
 
@@ -38,7 +44,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 Why:
 
-- OpenMAIC server fallback currently points at an Anthropic model if `DEFAULT_MODEL` is unset.
+- OpenMAIC server fallback is currently `gpt-4o-mini` if `DEFAULT_MODEL` is unset.
+- If the user wants Anthropic or Google by default, they should set `DEFAULT_MODEL` explicitly.
 
 ### 2. Better Speed / Cost Balance
 
@@ -55,6 +62,7 @@ Why:
 
 - Good quality-to-speed balance
 - Matches the repo's current recommendation direction better than the default fallback
+- The `google:` prefix is important. Without a provider prefix, model parsing defaults to OpenAI.
 
 ### 3. Existing Provider Reuse
 
@@ -71,6 +79,19 @@ DEFAULT_MODEL=openai:gpt-4o-mini
 DEEPSEEK_API_KEY=...
 DEFAULT_MODEL=deepseek:deepseek-chat
 ```
+
+## Model String Rule
+
+When recommending or showing `DEFAULT_MODEL`, always include the provider prefix:
+
+- `google:gemini-3-flash-preview`
+- `anthropic:claude-3-5-haiku-20241022`
+- `openai:gpt-4o-mini`
+- `deepseek:deepseek-chat`
+
+Do not recommend bare model IDs such as `gemini-3-flash-preview` by themselves, because OpenMAIC will otherwise parse them as OpenAI models.
+
+Do not work around a wrong `DEFAULT_MODEL` by changing request parameters. The user should fix the server-side config instead.
 
 ## Preferred Config Method
 
@@ -122,3 +143,4 @@ Avoid as the first move:
 - Instruct the user to modify the file themselves.
 - Wait for the user to confirm they finished editing before continuing.
 - Do not request the literal key.
+- If provider/model/auth errors happen later, tell the user exactly which config entry to fix and wait for confirmation before retrying.

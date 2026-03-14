@@ -16,6 +16,8 @@ Use this as a guided, confirmation-heavy SOP. Do not compress the whole setup in
 - If local state already exists, show what you found and ask whether to keep it.
 - Do not assume the OpenClaw agent's own model or API key will be reused by OpenMAIC.
 - OpenMAIC classroom generation uses OpenMAIC server-side provider config.
+- This skill must not rely on any request-time model or provider overrides.
+- Only OpenMAIC server-side config files may control provider selection and defaults.
 - Do not default to asking the user to paste API keys into chat.
 - Prefer guiding the user to edit local config files themselves.
 - Do not offer to write API keys into config files on the user's behalf.
@@ -62,7 +64,7 @@ Use this after the repo location is confirmed. Present the available startup mod
 
 Load [references/provider-keys.md](references/provider-keys.md).
 
-Use this before starting classroom generation. Recommend a provider path and tell the user exactly which config file to edit themselves.
+Use this before starting classroom generation. Recommend a provider path and tell the user exactly which config file to edit themselves. If generation later fails due to provider/model/auth issues, return to this phase and direct the user to update the same server-side config files.
 
 ### 4. Start And Verify OpenMAIC
 
@@ -72,7 +74,7 @@ After the user has chosen a startup mode and configured keys, start OpenMAIC usi
 
 Load [references/generate-flow.md](references/generate-flow.md).
 
-Use this only after the service is healthy. Confirm before reading local PDFs. If the user has already clearly asked to generate, do not ask for a second confirmation before submitting the generation job, and then follow the polling loop until it succeeds or fails.
+Use this only after the service is healthy. Confirm before reading local PDFs. If the user has already clearly asked to generate, do not ask for a second confirmation before submitting the generation job, and then follow the polling loop until it succeeds or fails. Only send the supported content fields for generation requests.
 
 ## Response Style
 

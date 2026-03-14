@@ -26,7 +26,7 @@ export function resolveModel(params: {
   providerType?: string;
   requiresApiKey?: boolean;
 }): ResolvedModel {
-  const modelString = params.modelString || 'gpt-4o-mini';
+  const modelString = params.modelString || process.env.DEFAULT_MODEL || 'gpt-4o-mini';
   const { providerId, modelId } = parseModelString(modelString);
   const apiKey = resolveApiKey(providerId, params.apiKey || '');
   const baseUrl = resolveBaseUrl(providerId, params.baseUrl);

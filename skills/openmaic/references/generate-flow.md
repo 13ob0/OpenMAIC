@@ -25,6 +25,14 @@ Request body:
 }
 ```
 
+Only send supported content fields:
+
+- `requirement`
+- optional `pdfContent`
+- optional `language`
+
+Do not rely on request-time model or provider override parameters.
+
 Treat the `POST` response as job submission only. Expect fields such as:
 
 ```json
@@ -77,6 +85,7 @@ GET {pollUrl}
 - If the job is still running after many polls, tell the user it is still in progress and continue polling instead of resubmitting.
 - Within a single agent turn, cap active polling to about 10 minutes or 120 polls. If the job is still not finished, tell the user it is still running and include the `jobId` and `pollUrl` so a later turn can continue checking without resubmitting.
 - Report progress to the user only when `status`, `step`, or visible progress meaningfully changes. Do not spam every poll result.
+- Do not try to recover from auth, provider, model, or base URL errors by changing request parameters. Tell the user to fix OpenMAIC server-side config and retry only after they confirm.
 - On `failed`, surface the server error and include the `jobId`.
 - On `succeeded`, use `result.classroomId` and `result.url` from the final poll response.
 
@@ -105,6 +114,8 @@ http://localhost:3001/classroom/Uyh82Y32ZK
 If the job fails, return the job ID plus the server error.
 
 If generation fails, surface the server error directly instead of paraphrasing it away.
+
+If the error suggests a provider or model configuration problem, explicitly tell the user to update `.env.local` or `server-providers.yml` instead of attempting a runtime override.
 
 ## Confirmation Requirements
 
