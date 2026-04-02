@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import type { ProvidersConfig } from '@/lib/types/settings';
 import {
   isProviderUsable,
   validateProvider,
   validateModel,
+  resolveDefaultChatModelFromEnv,
   type ProviderCfgLike,
 } from '@/lib/store/settings-validation';
 
@@ -116,5 +118,48 @@ describe('validateModel', () => {
 
   it('returns current id unchanged when it is empty', () => {
     expect(validateModel('', [{ id: 'gpt-4o' }])).toBe('');
+  });
+});
+
+describe('resolveDefaultChatModelFromEnv', () => {
+  const minimalOpenai = (usable: boolean): ProvidersConfig['openai'] =>
+    ({
+      apiKey: usable ? 'sk' : '',
+      baseUrl: '',
+      models: [{ id: 'gpt-4o', name: 'GPT-4o' }],
+      name: 'OpenAI',
+      type: 'openai',
+      requiresApiKey: true,
+      isBuiltIn: true,
+      isServerConfigured: usable,
+    }) as ProvidersConfig['openai'];
+
+  it('returns provider and model when raw is valid and provider is usable', () => {
+    const cfg: Partial<ProvidersConfig> = {
+      openai: minimalOpenai(true),
+    };
+    expect(resolveDefaultChatModelFromEnv('openai:gpt-4o', cfg as ProvidersConfig)).toEqual({
+      providerId: 'openai',
+      modelId: 'gpt-4o',
+    });
+  });
+
+  it('returns null when provider is not usable', () => {
+    const cfg: Partial<ProvidersConfig> = {
+      openai: minimalOpenai(false),
+    };
+    expect(resolveDefaultChatModelFromEnv('openai:gpt-4o', cfg as ProvidersConfig)).toBeNull();
+  });
+
+  it('returns null when model is not in the list', () => {
+    const cfg: Partial<ProvidersConfig> = {
+      openai: minimalOpenai(true),
+    };
+    expect(resolveDefaultChatModelFromEnv('openai:gpt-4-turbo', cfg as ProvidersConfig)).toBeNull();
+  });
+
+  it('returns null for empty raw', () => {
+    expect(resolveDefaultChatModelFromEnv('', { openai: minimalOpenai(true) } as ProvidersConfig)).toBeNull();
+    expect(resolveDefaultChatModelFromEnv(undefined, { openai: minimalOpenai(true) } as ProvidersConfig)).toBeNull();
   });
 });

@@ -5,6 +5,10 @@
  * stale provider/model selections after server config changes.
  */
 
+import type { ProviderId } from '@/lib/types/provider';
+import { parseModelString } from '@/lib/ai/providers';
+import type { ProvidersConfig } from '@/lib/types/settings';
+
 export type ProviderCfgLike = {
   isServerConfigured?: boolean;
   apiKey?: string;
@@ -47,4 +51,23 @@ export function validateModel(
   if (!currentModelId) return currentModelId;
   if (availableModels.some((m) => m.id === currentModelId)) return currentModelId;
   return availableModels[0]?.id ?? '';
+}
+
+/**
+ * Resolve DEFAULT_MODEL from server-providers API into a usable chat selection.
+ * Returns null if raw is empty, parse fails, provider is unusable, or model is not in the list.
+ */
+export function resolveDefaultChatModelFromEnv(
+  raw: string | null | undefined,
+  providersConfig: ProvidersConfig,
+): { providerId: ProviderId; modelId: string } | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+
+  const { providerId, modelId } = parseModelString(trimmed);
+  const cfg = providersConfig[providerId];
+  if (!isProviderUsable(cfg)) return null;
+  const models = cfg?.models ?? [];
+  if (!models.some((m) => m.id === modelId)) return null;
+  return { providerId, modelId };
 }

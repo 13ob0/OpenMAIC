@@ -14,6 +14,7 @@ const log = createLogger('ServerProviders');
 
 export async function GET() {
   try {
+    const defaultModel = process.env.DEFAULT_MODEL?.trim() || undefined;
     return apiSuccess({
       providers: getServerProviders(),
       tts: getServerTTSProviders(),
@@ -22,6 +23,7 @@ export async function GET() {
       image: getServerImageProviders(),
       video: getServerVideoProviders(),
       webSearch: getServerWebSearchProviders(),
+      ...(defaultModel ? { defaultModel } : {}),
     });
   } catch (error) {
     log.error('Error fetching server providers:', error);

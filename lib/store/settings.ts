@@ -18,7 +18,11 @@ import { VIDEO_PROVIDERS } from '@/lib/media/video-providers';
 import { WEB_SEARCH_PROVIDERS } from '@/lib/web-search/constants';
 import type { WebSearchProviderId } from '@/lib/web-search/types';
 import { createLogger } from '@/lib/logger';
-import { validateProvider, validateModel } from '@/lib/store/settings-validation';
+import {
+  validateProvider,
+  validateModel,
+  resolveDefaultChatModelFromEnv,
+} from '@/lib/store/settings-validation';
 
 const log = createLogger('Settings');
 
@@ -761,6 +765,7 @@ export const useSettingsStore = create<SettingsState>()(
               image: Record<string, { baseUrl?: string }>;
               video: Record<string, { baseUrl?: string }>;
               webSearch: Record<string, { baseUrl?: string }>;
+              defaultModel?: string;
             };
 
             set((state) => {
@@ -1103,10 +1108,15 @@ export const useSettingsStore = create<SettingsState>()(
                 }
               }
 
-              // LLM auto-select: only on true first load (no provider selected yet)
+              // DEFAULT_MODEL from env (via API): priority when user has not chosen a chat model yet
+              const envDefaultLlm = !state.modelId
+                ? resolveDefaultChatModelFromEnv(data.defaultModel, newProvidersConfig)
+                : null;
+
+              // LLM auto-select: first server-configured provider — only if no env default and no provider+model
               let autoProviderId: ProviderId | undefined;
               let autoModelId: string | undefined;
-              if (!state.providerId && !state.modelId) {
+              if (!envDefaultLlm && !state.providerId && !state.modelId) {
                 for (const [pid, cfg] of Object.entries(newProvidersConfig)) {
                   if (cfg.isServerConfigured) {
                     // Prefer server-restricted models, fall back to built-in list
@@ -1186,6 +1196,10 @@ export const useSettingsStore = create<SettingsState>()(
                 }),
                 ...(autoProviderId && { providerId: autoProviderId }),
                 ...(autoModelId && { modelId: autoModelId }),
+                ...(envDefaultLlm && {
+                  providerId: envDefaultLlm.providerId,
+                  modelId: envDefaultLlm.modelId,
+                }),
               };
             });
           } catch (e) {
