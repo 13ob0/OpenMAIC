@@ -19,6 +19,7 @@ import type { PDFProviderId } from '@/lib/pdf/types';
 import { WEB_SEARCH_PROVIDERS } from '@/lib/web-search/constants';
 import type { WebSearchProviderId } from '@/lib/web-search/types';
 import type { ProviderId } from '@/lib/ai/providers';
+import { PROVIDERS } from '@/lib/ai/providers';
 import type { SettingsSection } from '@/lib/types/settings';
 import { MediaPopover } from '@/components/generation/media-popover';
 
@@ -73,26 +74,72 @@ export function GenerationToolbar({
       !!webSearchConfig?.isServerConfigured
     : false;
 
-  // Configured LLM providers (only those with valid credentials + models + endpoint)
-  const configuredProviders = providersConfig
-    ? Object.entries(providersConfig)
-        .filter(
-          ([, config]) =>
-            (!config.requiresApiKey || config.apiKey || config.isServerConfigured) &&
-            config.models.length >= 1 &&
-            (config.baseUrl || config.defaultBaseUrl || config.serverBaseUrl),
-        )
-        .map(([id, config]) => ({
+  // LLM providers for the toolbar: usually require API key or server-config. We also
+  // include the provider that matches the current store selection (e.g. env
+  // DEFAULT_MODEL applied in fetchServerProviders) so the model pill shows on the home
+  // page even when the user has not entered a client key yet.
+  const configuredProviders = useMemo(() => {
+    if (!providersConfig) return [];
+    return Object.entries(providersConfig)
+      .filter(([id, config]) => {
+        const hasEndpoint = !!(
+          config.baseUrl ||
+          config.defaultBaseUrl ||
+          config.serverBaseUrl
+        );
+        const builtInList =
+          id in PROVIDERS
+            ? PROVIDERS[id as keyof typeof PROVIDERS]?.models ?? []
+            : [];
+        const modelInBuiltIn = (mid: string) => builtInList.some((m) => m.id === mid);
+
+        // Server may narrow cfg.models so DEFAULT_MODEL (e.g. MiniMax-M2.7-highspeed) is
+        // only on the built-in catalog — still treat as a configured row for the toolbar.
+        const storeUsesThisBuiltInModel =
+          id === currentProviderId &&
+          !!currentModelId &&
+          modelInBuiltIn(currentModelId);
+        const hasModels =
+          config.models.length >= 1 || (storeUsesThisBuiltInModel && builtInList.length >= 1);
+        if (!hasModels || !hasEndpoint) return false;
+
+        const credsOk =
+          !config.requiresApiKey || !!config.apiKey || !!config.isServerConfigured;
+        const matchesStoreSelection =
+          storeUsesThisBuiltInModel ||
+          (id === currentProviderId &&
+            !!currentModelId &&
+            config.models.some((m) => m.id === currentModelId));
+
+        return credsOk || matchesStoreSelection;
+      })
+      .map(([id, config]) => {
+        const builtInList =
+          id in PROVIDERS
+            ? PROVIDERS[id as keyof typeof PROVIDERS]?.models ?? []
+            : [];
+        let models =
+          config.isServerConfigured && !config.apiKey && config.serverModels?.length
+            ? config.models.filter((m) => new Set(config.serverModels).has(m.id))
+            : config.models;
+        if (
+          id === currentProviderId &&
+          currentModelId &&
+          !models.some((m) => m.id === currentModelId) &&
+          builtInList.some((m) => m.id === currentModelId)
+        ) {
+          const add = builtInList.find((m) => m.id === currentModelId);
+          if (add) models = [...models, add];
+        }
+        return {
           id: id as ProviderId,
           name: config.name,
           icon: config.icon,
           isServerConfigured: config.isServerConfigured,
-          models:
-            config.isServerConfigured && !config.apiKey && config.serverModels?.length
-              ? config.models.filter((m) => new Set(config.serverModels).has(m.id))
-              : config.models,
-        }))
-    : [];
+          models,
+        };
+      });
+  }, [providersConfig, currentProviderId, currentModelId]);
 
   const currentProviderConfig = providersConfig?.[currentProviderId];
 

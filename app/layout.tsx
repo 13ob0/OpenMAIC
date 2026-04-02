@@ -33,6 +33,12 @@ export default function RootLayout({
         className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        {/* Server-only: expose DEFAULT_MODEL before React so persist rehydrate can apply selection without waiting for /api/server-providers */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__OPENMAIC_DEFAULT_MODEL__=${JSON.stringify(process.env.DEFAULT_MODEL ?? '')};`,
+          }}
+        />
         <ThemeProvider>
           <I18nProvider>
             <ServerProvidersInit />

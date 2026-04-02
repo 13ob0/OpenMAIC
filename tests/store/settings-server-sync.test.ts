@@ -185,7 +185,6 @@ interface MockServerResponse {
   image?: Record<string, Record<string, never>>;
   video?: Record<string, Record<string, never>>;
   webSearch?: Record<string, { baseUrl?: string }>;
-  defaultModel?: string;
 }
 
 function mockServerResponse(overrides: MockServerResponse = {}) {
@@ -199,7 +198,6 @@ function mockServerResponse(overrides: MockServerResponse = {}) {
       image: {},
       video: {},
       webSearch: {},
-      defaultModel: undefined,
       ...overrides,
     }),
   });
@@ -817,76 +815,6 @@ describe('fetchServerProviders — Video stale selection', () => {
     expect(store.getState().videoModelId).toBe('doubao-seedance-1-5-pro-251215');
     // Provider recovered but generation stays off — user enables manually
     expect(store.getState().videoGenerationEnabled).toBe(false);
-  });
-});
-
-describe('fetchServerProviders — DEFAULT_MODEL (defaultModel)', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    storage.clear();
-    mockFetch.mockReset();
-  });
-
-  async function getStore() {
-    const { useSettingsStore } = await import('@/lib/store/settings');
-    return useSettingsStore;
-  }
-
-  it('applies defaultModel when modelId is empty and provider/model are usable', async () => {
-    const store = await getStore();
-    expect(store.getState().modelId).toBe('');
-
-    mockServerResponse({
-      providers: {
-        openai: { models: ['gpt-4o'] },
-      },
-      defaultModel: 'openai:gpt-4o',
-    });
-    await store.getState().fetchServerProviders();
-
-    expect(store.getState().providerId).toBe('openai');
-    expect(store.getState().modelId).toBe('gpt-4o');
-  });
-
-  it('does not apply defaultModel when model is not in the allowed list', async () => {
-    const store = await getStore();
-
-    mockServerResponse({
-      providers: {
-        openai: { models: ['gpt-4o'] },
-      },
-      defaultModel: 'openai:gpt-4o-mini',
-    });
-    await store.getState().fetchServerProviders();
-
-    expect(store.getState().modelId).toBe('');
-  });
-
-  it('does not apply defaultModel when provider is not usable', async () => {
-    const store = await getStore();
-
-    mockServerResponse({
-      providers: {},
-      defaultModel: 'openai:gpt-4o-mini',
-    });
-    await store.getState().fetchServerProviders();
-
-    expect(store.getState().modelId).toBe('');
-  });
-
-  it('does not override an existing modelId', async () => {
-    const store = await getStore();
-    store.getState().setModel('openai', 'gpt-4o-mini');
-
-    mockServerResponse({
-      providers: {
-        openai: { models: ['gpt-4o', 'gpt-4o-mini'] },
-      },
-      defaultModel: 'openai:gpt-4o',
-    });
-    await store.getState().fetchServerProviders();
-
-    expect(store.getState().modelId).toBe('gpt-4o-mini');
   });
 });
 

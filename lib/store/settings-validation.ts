@@ -6,7 +6,7 @@
  */
 
 import type { ProviderId } from '@/lib/types/provider';
-import { parseModelString } from '@/lib/ai/providers';
+import { parseModelString, PROVIDERS } from '@/lib/ai/providers';
 import type { ProvidersConfig } from '@/lib/types/settings';
 
 export type ProviderCfgLike = {
@@ -54,8 +54,15 @@ export function validateModel(
 }
 
 /**
- * Resolve DEFAULT_MODEL from server-providers API into a usable chat selection.
- * Returns null if raw is empty, parse fails, provider is unusable, or model is not in the list.
+ * Resolve DEFAULT_MODEL from server-providers API into a chat selection for the UI.
+ * Returns null if raw is empty, provider is missing, or model is not allowed.
+ *
+ * Does not require a client API key: when the deployment sets DEFAULT_MODEL, we still
+ * select that model so the UI matches the server default (keys may live only on the server).
+ *
+ * When the server restricts models (serverModels), cfg.models is filtered to that list.
+ * DEFAULT_MODEL may still name a model that only exists on the built-in catalog (e.g. admin
+ * sets MiniMax-M2.7-highspeed while server allowlist is narrower) — accept if inBuiltIn.
  */
 export function resolveDefaultChatModelFromEnv(
   raw: string | null | undefined,
@@ -66,8 +73,20 @@ export function resolveDefaultChatModelFromEnv(
 
   const { providerId, modelId } = parseModelString(trimmed);
   const cfg = providersConfig[providerId];
-  if (!isProviderUsable(cfg)) return null;
-  const models = cfg?.models ?? [];
-  if (!models.some((m) => m.id === modelId)) return null;
+  if (!cfg) return null;
+
+  const inCfg = (cfg.models ?? []).some((m) => m.id === modelId);
+  const builtIn =
+    providerId in PROVIDERS
+      ? PROVIDERS[providerId as keyof typeof PROVIDERS]?.models
+      : undefined;
+  const inBuiltIn = builtIn?.some((m) => m.id === modelId) ?? false;
+
+  if (cfg.serverModels?.length) {
+    if (!inCfg && !inBuiltIn) return null;
+  } else if (!inCfg && !inBuiltIn) {
+    return null;
+  }
+
   return { providerId, modelId };
 }

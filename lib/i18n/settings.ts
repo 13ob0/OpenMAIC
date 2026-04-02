@@ -540,6 +540,10 @@ export const settingsZhCN = {
     // Access code
     setupNeeded: '请先完成配置',
     modelNotConfigured: '请选择一个模型以开始使用',
+    defaultModelEnvMissing:
+      '未配置环境变量 DEFAULT_MODEL。请在服务器或 .env 中设置，例如 openai:gpt-4o-mini，然后重新部署或重启。',
+    defaultModelEnvInvalid:
+      'DEFAULT_MODEL 无效或当前配置中不可用。请检查格式（如 provider:modelId）以及模型是否存在于该提供方列表中。',
     // Clear cache
     dangerZone: '危险区域',
     clearCache: '清空本地缓存',
@@ -1142,6 +1146,10 @@ export const settingsEnUS = {
     // Access code
     setupNeeded: 'Setup required',
     modelNotConfigured: 'Please select a model to get started',
+    defaultModelEnvMissing:
+      'DEFAULT_MODEL is not set. Add it to your server environment or .env (e.g. openai:gpt-4o-mini), then redeploy or restart.',
+    defaultModelEnvInvalid:
+      'DEFAULT_MODEL is invalid or not available for the current provider list. Check the format (provider:modelId) and that the model exists for that provider.',
     // Clear cache
     dangerZone: 'Danger Zone',
     clearCache: 'Clear Local Cache',

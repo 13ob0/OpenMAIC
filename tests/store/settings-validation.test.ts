@@ -144,18 +144,50 @@ describe('resolveDefaultChatModelFromEnv', () => {
     });
   });
 
-  it('returns null when provider is not usable', () => {
+  it('still resolves when provider has no key and is not server-configured if model is in built-in catalog', () => {
     const cfg: Partial<ProvidersConfig> = {
       openai: minimalOpenai(false),
     };
-    expect(resolveDefaultChatModelFromEnv('openai:gpt-4o', cfg as ProvidersConfig)).toBeNull();
+    expect(resolveDefaultChatModelFromEnv('openai:gpt-4o', cfg as ProvidersConfig)).toEqual({
+      providerId: 'openai',
+      modelId: 'gpt-4o',
+    });
   });
 
-  it('returns null when model is not in the list', () => {
+  it('returns null when model is not in built-in catalog and not in config', () => {
     const cfg: Partial<ProvidersConfig> = {
       openai: minimalOpenai(true),
     };
-    expect(resolveDefaultChatModelFromEnv('openai:gpt-4-turbo', cfg as ProvidersConfig)).toBeNull();
+    expect(
+      resolveDefaultChatModelFromEnv('openai:model-that-does-not-exist', cfg as ProvidersConfig),
+    ).toBeNull();
+  });
+
+  it('still resolves when server allowlist is narrow but model exists in built-in catalog', () => {
+    const cfg: Partial<ProvidersConfig> = {
+      openai: {
+        ...minimalOpenai(true),
+        serverModels: ['gpt-4o-mini'],
+        models: [{ id: 'gpt-4o-mini', name: 'Mini' }],
+      } as ProvidersConfig['openai'],
+    };
+    expect(resolveDefaultChatModelFromEnv('openai:gpt-4o', cfg as ProvidersConfig)).toEqual({
+      providerId: 'openai',
+      modelId: 'gpt-4o',
+    });
+  });
+
+  it('returns null when model is absent from both filtered config and built-in catalog', () => {
+    const cfg: Partial<ProvidersConfig> = {
+      openai: {
+        ...minimalOpenai(true),
+        serverModels: ['gpt-4o-mini'],
+        models: [{ id: 'gpt-4o-mini', name: 'Mini' }],
+      } as ProvidersConfig['openai'],
+    };
+    expect(
+      resolveDefaultChatModelFromEnv('openai:model-that-does-not-exist-anywhere', cfg as ProvidersConfig),
+    ).toBeNull();
   });
 
   it('returns null for empty raw', () => {
