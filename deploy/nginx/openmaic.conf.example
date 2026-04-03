@@ -1,0 +1,62 @@
+# OpenMAIC — Nginx 反向代理示例（复制为 .conf 并按环境 include）
+#
+# 与 Next.js `maxDuration` 对齐：部分 API 最长 300s；/api/chat SSE 为 60s。
+# 监听端口、上游地址请按实际修改。
+#
+# 用法（Debian/Ubuntu 常见）：
+#   sudo cp openmaic.conf.example /etc/nginx/sites-available/openmaic.conf
+#   sudo ln -sf /etc/nginx/sites-available/openmaic.conf /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+
+upstream openmaic_next {
+    # 单实例（PM2 cluster 共端口 1024）：仅保留一行 server
+    least_conn;
+    server 127.0.0.1:1024;
+    keepalive 32;
+}
+
+# 多端口 fork 时，将 upstream 改为多行 server，例如：
+#   server 127.0.0.1:1024;
+#   server 127.0.0.1:1025;
+#   server 127.0.0.1:1026;
+# 详见同目录 openmaic-upstream-multiport.conf.example
+
+server {
+    listen 2024;
+    server_name _;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+
+    client_max_body_size 0;
+
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 360s;
+    proxy_read_timeout 360s;
+
+    # SSE：关闭响应缓冲，避免首包/流式被攒在 Nginx
+    location /api/chat {
+        proxy_pass http://openmaic_next;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_cache off;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://openmaic_next;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

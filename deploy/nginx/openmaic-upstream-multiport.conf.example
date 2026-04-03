@@ -1,0 +1,13 @@
+# 仅展示「多端口 Next + Nginx upstream」时 upstream 块写法。
+# 将下列 server 列表合并进 openmaic.conf.example 中的 `upstream openmaic_next { ... }`，
+# 并删除单行的 `server 127.0.0.1:1024;`，或按需增删端口。
+#
+# PM2 多 fork 示例见仓库根目录 ecosystem.fork-multiport.config.cjs
+
+upstream openmaic_next {
+    least_conn;
+    server 127.0.0.1:1024;
+    server 127.0.0.1:1025;
+    server 127.0.0.1:1026;
+    keepalive 32;
+}

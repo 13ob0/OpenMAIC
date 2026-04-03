@@ -16,7 +16,9 @@
     "format": "prettier . --write",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "perf:k6:health": "k6 run perf/k6/health.js",
+    "perf:k6:chat": "k6 run perf/k6/chat-stream.js"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.23",
